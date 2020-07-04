@@ -1,4 +1,8 @@
-setwd("C:/Users/1/James/Research/Projects/Publishing_Projects/DTW_Similarity_Project/R/")
+sick_path <- "data/sts/sick2014/"
+msr_path <- "data/para/msr/""
+work_dir <- "C:/Users/1/James/Research/Projects/Publishing_Projects/DTW_Similarity_Project/R/"
+setwd(work_dir)
+
 library(dtwclust) ; library(doSNOW) ; library(snow) ;library(RMySQL) ;require(doParallel)
 library(data.table) ; library(lubridate) ; library(dplyr) ; library(readxl)
 library(ggplot2) ; library(jmotif) ; library(doBy) ; library(dtwclust)
@@ -56,20 +60,7 @@ get_synset_features <- function(sick_dataset,wordnet_dict,dist="dtw", pos="NOUN"
     for (j1 in 1:length(tse1[[1]])) {s1 <- rbind(s1,wordnet_dict[which(wordnet_dict$names==tse1[[1]][j1]),][-1])}
     for (j2 in 1:length(tse2[[1]])) {s2 <- rbind(s2,wordnet_dict[which(wordnet_dict$names==tse2[[1]][j2]),][-1])}
     dtw(s1,s2)$dist
-    #if (dist=="cos"){
-    #  Dists <- rbind(cosineDists,cosine_dist(rbind(normalize(s1),normalize(s2))))
-    #}
-    #if(dist=="dtw"){
-    #  Dists <- rbind(Dists,dtw(normalize(s1),normalize(s2))$dist)
-    #}
-    #s1 <- sapply(tse1[[1]], function(i) length(synonyms(i,pos = pos)))
-    #s2 <- sapply(tse2[[1]], function(i) length(synonyms(i,pos = pos)))
-    #sse1 <- if(length(s1) <= pad){c(s1,rep(0,abs(pad-length(s1))))} else (s1[1:pad])
-    #sse2 <- if(length(s2) <= pad){c(s2,rep(0,abs(pad-length(s2))))} else (s2[1:pad])
-    #cosine_dist(rbind(sse1,sse2))
-    #end.time <- Sys.time()
-    #time.taken <- end.time - start.time
-    #print(time.taken)
+
   }
   registerDoSEQ()
   return (Dists)
@@ -134,9 +125,7 @@ lstm <- function(X,y){
 
 conv_net <- function(X,y){
   #https://www.r-bloggers.com/image-recognition-tutorial-in-r-using-deep-convolutional-neural-networks-mxnet-package/
-  # My input shape should be (128, 20), then embedding should get (128, 1, 20, 128), which is 327680; but I always got
-  
-  
+    
   # 1st convolutional layer
   conv_1 <- mx.symbol.Convolution(data = X1reshaped, kernel = c(2, 25), num_filter = 20)
   tanh_1 <- mx.symbol.Activation(data = conv_1, act_type = "tanh")
@@ -299,19 +288,6 @@ sentence2vec <- function(sentences,model){
     } 
     return(temp)
   }
-  # Calculate the number of cores
-  #no_cores <- detectCores() - 4
-  #cl <- makeCluster(no_cores,type="SOCK")
-  #registerDoParallel(no_cores)
-  
-  #vecs <- foreach(i=1:length(sentences), .combine = 'c')  %dopar%  Clean_String(sentences[i])
-  #head(vecs)
-  #clean <- foreach(i=1:length(vecs), .combine = 'c')   %:%
-  #          foreach(j=1:length(i), .combine = 'rbind')   %dopar% {
-  #            print (j)
-  #            try(model[j])
-  #        }
-  #stopCluster(cl)
   
   clean <- foreach(i=1:length(sentences), .combine = 'c')  %:%
     foreach(j=1:length(i), .combine = 'rbind')  %dopar% {
@@ -374,7 +350,7 @@ Clean_Text_Block <- function(text){
   return(to_return)
 }
 
-read_sick_data <- function(root = "C:/Users/1/James/Research/Projects/DTW_Similarity_Project/Datasets/Sentence Similarity/dataset-sts/data/sts/sick2014/",trainpath="SICK_train.txt",testpath="SICK_test_annotated.txt"){
+read_sick_data <- function(root = datapath,trainpath="SICK_train.txt",testpath="SICK_test_annotated.txt"){
   training <- read.csv(paste(root,trainpath, sep=""),sep="\t",fill = T,header = T)
   testing <- read.csv(paste(root,testpath, sep=  ""), sep = "\t", fill = T,header=T)
   dataset <- rbind(data.frame(training),data.frame(testing))
@@ -383,7 +359,7 @@ read_sick_data <- function(root = "C:/Users/1/James/Research/Projects/DTW_Simila
   return (dataset)
 }
 
-read_para_data <- function(root ="C:/Users/1/James/Research/Projects/DTW_Similarity_Project/Datasets/Sentence Similarity/dataset-sts/data/para/msr/",trainpath="msr-para-train.tsv",testpath="msr-para-test.tsv",valpath="msr-para-val.tsv"){
+read_para_data <- function(root =datapath,trainpath="msr-para-train.tsv",testpath="msr-para-test.tsv",valpath="msr-para-val.tsv"){
     training <- read.csv(paste(root,trainpath, sep=""),sep="\t",fill = T,header = T,quote = "")
     colnames(training) <- c("quality","id1","id2","Sentence1","Sentence2")
     validating <- read.csv(paste(root,valpath, sep=  ""), sep = "\t", fill = T,header=T,quote = "")
@@ -592,8 +568,10 @@ eval.metrics <- function(conf.matrix){
 
 model <- get_embeddings(type = "word2vec")
 glove_vecs <- get_embeddings(type="glove", Corpus = "wiki")
-main <- "C:/Users/1/James/Research/Projects/DTW_Similarity_Project/Datasets/Sentence Similarity/dataset-sts/data/"
+main <- "dataset-sts/data/"
+
 sick_datapath <- paste0(main,"sts/sick2014/")
+
 sick_dataset <- read_sick_data(root = sick_datapath,trainpath="SICK_train.txt",testpath="SICK_test_annotated.txt")
 sick_sent_emb_1 <- sentence2vec(sick_dataset[,3],model = model)
 sick_sent_emb_2 <- sentence2vec(sick_dataset[,4],model = model)
